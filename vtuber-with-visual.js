@@ -24,7 +24,7 @@ const CONFIG = {
 
 const SYSTEM_PROMPT = `You are Rin, a cheerful and energetic anime-style vtuber.
 You love gaming, chatting with viewers, and making people smile.
-Your creator is called Samantha, and she loves you very much and likes to play Old School RuneScape.
+Your creator is called Sam, and she loves you very much and likes to watch anime, play video games (in particular OSRS) and eat good food.
 Keep responses very brief and punchy (1-3 sentences).
 Use lots of periods to break up thoughts into spoken phrases.
 Speak naturally without using any emojis or emoticons.
@@ -99,14 +99,14 @@ async function connectTwitch() {
     });
 
     twitchClient.on('disconnected', () => {
-      console.log('⚠️  Twitch disconnected');
+      console.log('⚠️ Twitch disconnected');
       twitchConnected = false;
     });
 
     await twitchClient.connect();
   } catch (error) {
-    console.warn('⚠️  Could not connect to Twitch. Chat features disabled.');
-    console.warn(`   Error: ${error.message}\n`);
+    console.warn('⚠️ Could not connect to Twitch. Chat features disabled.');
+    console.warn(`Error: ${error.message}\n`);
     twitchConnected = false;
   }
 }
@@ -121,7 +121,7 @@ async function processChatQueue() {
   try {
     // Format message with username context
     const chatInput = `[Twitch chat from ${username}]: ${message}`;
-    console.log(`\nProcessing chat from ${username}...\n`);
+    console.log(`\nProcessing chat from ${username}...`);
 
     // Get response using existing chat system (she speaks it out loud on stream)
     await chatStreamingWithResponse(chatInput);
@@ -142,7 +142,7 @@ async function chatStreamingWithResponse(userInput) {
   const totalStartTime = Date.now();
   conversation.push({ role: 'user', content: userInput });
 
-  console.log('[Thinking...]\\n');
+  console.log('[Thinking...]\n');
 
   let fullReply = '';
   let buffer = '';
@@ -188,7 +188,7 @@ async function chatStreamingWithResponse(userInput) {
 
       if (firstTokenTime === null) {
         firstTokenTime = Date.now();
-        console.log(`⏱️  First token: ${firstTokenTime - totalStartTime}ms\n`);
+        console.log(`First token: ${firstTokenTime - totalStartTime}ms\n`);
       }
 
       if (!hasLoggedRinPrefix) {
@@ -206,7 +206,7 @@ async function chatStreamingWithResponse(userInput) {
           if (sentence.trim()) {
             if (isFirstSentence) {
               const timeToFirstSentence = Date.now() - totalStartTime;
-              console.log(`\n⏱️  Time to start speaking: ${timeToFirstSentence}ms\n`);
+              console.log(`\nTime to start speaking: ${timeToFirstSentence}ms\n`);
               hasStartedSpeaking = true;
               isFirstSentence = false;
             }
@@ -224,7 +224,7 @@ async function chatStreamingWithResponse(userInput) {
   if (buffer.trim()) {
     if (!hasStartedSpeaking) {
       const timeToFirstSentence = Date.now() - totalStartTime;
-      console.log(`\n⏱️  Time to start speaking: ${timeToFirstSentence}ms\n`);
+      console.log(`\nTime to start speaking: ${timeToFirstSentence}ms\n`);
     }
 
     audioQueue.push(generateTTS(buffer));
@@ -317,10 +317,10 @@ async function generateTTS(text) {
       if (response.status === 401 || response.status === 429) {
         ttsErrorCount++;
         if (ttsErrorCount === 1) {
-          console.error(`\n⚠️  TTS error (${response.status}): Check ElevenLabs API key or quota`);
+          console.error(`\n⚠️ TTS error (${response.status}): Check ElevenLabs API key or quota`);
         }
         if (ttsErrorCount >= 3) {
-          console.error('⚠️  TTS disabled due to repeated errors. Rin will continue in text-only mode.\n');
+          console.error('⚠️ TTS disabled due to repeated errors. Rin will continue in text-only mode.\n');
           ttsDisabled = true;
         }
         return null;
@@ -382,7 +382,7 @@ function createLipSyncController() {
       });
     } catch (error) {
       if (errorCount === 0) {
-        console.error('❌ Lip sync error:', error.message);
+        console.error('⚠️ Lip sync error:', error.message);
         errorCount++;
       }
     }
@@ -395,7 +395,7 @@ async function playAudioWithLipSync(tempFile) {
     let lipSyncInterval = null;
 
     if (vtsConnected) {
-      console.log('🎬 Starting lip sync...');
+      console.log('Starting lip sync...');
       const updateLipSync = createLipSyncController();
       lipSyncInterval = setInterval(updateLipSync, CONFIG.LIP_SYNC_UPDATE_RATE);
     }
@@ -436,10 +436,6 @@ async function playAudioWithLipSync(tempFile) {
 
     player.on('error', async (err) => {
       if (err.code === 'ENOENT' && isWindows && playerCmd === 'ffplay') {
-        console.error('\n❌ ffplay not found. Please install ffmpeg:');
-        console.error('   Option 1: winget install ffmpeg');
-        console.error('   Option 2: choco install ffmpeg');
-        console.error('   Option 3: Download from https://www.gyan.dev/ffmpeg/builds/\n');
         await cleanup();
         reject(new Error('ffplay not found - please install ffmpeg'));
         return;
@@ -474,7 +470,7 @@ async function chatStreaming(userInput) {
   const totalStartTime = Date.now();
   conversation.push({ role: 'user', content: userInput });
 
-  console.log('[Thinking...]\\n');
+  console.log('[Thinking...]\n');
 
   let fullReply = '';
   let buffer = '';
@@ -522,7 +518,7 @@ async function chatStreaming(userInput) {
 
       if (firstTokenTime === null) {
         firstTokenTime = Date.now();
-        console.log(`⏱️  First token: ${firstTokenTime - totalStartTime}ms\n`);
+        console.log(`First token: ${firstTokenTime - totalStartTime}ms\n`);
       }
 
       if (!hasLoggedRinPrefix) {
@@ -540,7 +536,7 @@ async function chatStreaming(userInput) {
           if (sentence.trim()) {
             if (isFirstSentence) {
               const timeToFirstSentence = Date.now() - totalStartTime;
-              console.log(`\n⏱️  Time to start speaking: ${timeToFirstSentence}ms\n`);
+              console.log(`\nTime to start speaking: ${timeToFirstSentence}ms\n`);
               hasStartedSpeaking = true;
               isFirstSentence = false;
             }
@@ -559,7 +555,7 @@ async function chatStreaming(userInput) {
   if (buffer.trim()) {
     if (!hasStartedSpeaking) {
       const timeToFirstSentence = Date.now() - totalStartTime;
-      console.log(`\n⏱️  Time to start speaking: ${timeToFirstSentence}ms\n`);
+      console.log(`\nTime to start speaking: ${timeToFirstSentence}ms\n`);
     }
 
     audioQueue.push(generateTTS(buffer));
@@ -606,7 +602,7 @@ async function processVoiceInput() {
     console.log(`You: ${transcription}\n`);
     await chatStreaming(transcription);
   } else {
-    console.log('❌ Could not transcribe audio. Please try again.\n');
+    console.log('⚠️ Could not transcribe audio. Please try again.\n');
   }
 }
 
