@@ -9,7 +9,7 @@ class VTubeStudioAPI {
     this.messageId = 0;
     this.pendingRequests = new Map();
     this.pluginName = 'AI VTuber';
-    this.pluginDeveloper = 'Miku AI';
+    this.pluginDeveloper = 'Rin AI';
     this.tokenFile = '.vts_auth_token';
   }
 
@@ -37,7 +37,7 @@ class VTubeStudioAPI {
             } else if (response.data) {
               handler.resolve(response.data);
             } else {
-              handler.reject(new Error('No data in response'));
+              handler.reject(new Error('No data in response.'));
             }
           }
         }
@@ -48,8 +48,43 @@ class VTubeStudioAPI {
         reject(error);
       });
 
-      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+      setTimeout(() => reject(new Error('Connection timeout.')), 5000);
     });
+  }
+
+    async authenticate() {
+    // Try to load existing token
+    let token = this.loadToken();
+
+    if (!token) {
+      // Request new token
+      console.log('Requesting auth token from VTube Studio...');
+      console.log('Please click "Allow" in VTube Studio!');
+
+      const tokenResponse = await this.sendRequest('AuthenticationTokenRequest', {
+        pluginName: this.pluginName,
+        pluginDeveloper: this.pluginDeveloper
+      });
+
+      token = tokenResponse.authenticationToken;
+      this.saveToken(token);
+      console.log('✓ Token received and saved');
+    }
+
+    // Authenticate with the token
+    const authResponse = await this.sendRequest('AuthenticationRequest', {
+      pluginName: this.pluginName,
+      pluginDeveloper: this.pluginDeveloper,
+      authenticationToken: token
+    });
+
+    if (authResponse.authenticated) {
+      this.authenticated = true;
+      console.log('Authentication successful!');
+      return true;
+    } else {
+      throw new Error('Authentication failed: ' + authResponse.reason);
+    }
   }
 
   async sendRequest(messageType, data = {}) {
@@ -83,56 +118,21 @@ class VTubeStudioAPI {
         return readFileSync(this.tokenFile, 'utf-8').trim();
       }
     } catch (error) {
-      // Ignore
+      console.warn('Could not load VTS auth token.');
     }
-    return null;
   }
 
   saveToken(token) {
     try {
       writeFileSync(this.tokenFile, token);
     } catch (error) {
-      console.warn('Could not save VTS auth token');
-    }
-  }
-
-  async authenticate() {
-    // Try to load existing token
-    let token = this.loadToken();
-
-    if (!token) {
-      // Request new token
-      console.log('⏳ Requesting auth token from VTube Studio...');
-      console.log('   Please click "Allow" in VTube Studio\n');
-
-      const tokenResponse = await this.sendRequest('AuthenticationTokenRequest', {
-        pluginName: this.pluginName,
-        pluginDeveloper: this.pluginDeveloper
-      });
-
-      token = tokenResponse.authenticationToken;
-      this.saveToken(token);
-      console.log('✓ Token received and saved');
-    }
-
-    // Authenticate with the token
-    const authResponse = await this.sendRequest('AuthenticationRequest', {
-      pluginName: this.pluginName,
-      pluginDeveloper: this.pluginDeveloper,
-      authenticationToken: token
-    });
-
-    if (authResponse.authenticated) {
-      this.authenticated = true;
-      return true;
-    } else {
-      throw new Error('Authentication failed: ' + authResponse.reason);
+      console.warn('Could not save VTS auth token.');
     }
   }
 
   async injectParameterData(params) {
     if (!this.authenticated) {
-      throw new Error('Not authenticated with VTube Studio');
+      throw new Error('Not authenticated with VTube Studio.');
     }
     return this.sendRequest('InjectParameterDataRequest', params);
   }

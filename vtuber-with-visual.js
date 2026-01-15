@@ -1,10 +1,11 @@
-import 'dotenv/config';
-import Anthropic from '@anthropic-ai/sdk';
-import { spawn, exec } from 'child_process';
 import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
+import Anthropic from '@anthropic-ai/sdk';
 import VTubeStudioAPI from './vts-direct.js';
 import tmi from 'tmi.js';
+import 'dotenv/config';
 
 const execPromise = promisify(exec);
 
@@ -29,10 +30,9 @@ Use lots of periods to break up thoughts into spoken phrases.
 Speak naturally without using any emojis or emoticons.
 Try to engage with your viewers as much as possible, and entertain their ideas.`;
 
-// State
+// VTS state
 let vts = null;
 let vtsConnected = false;
-const conversation = [];
 
 // Twitch state
 let twitchClient = null;
@@ -40,22 +40,25 @@ let twitchConnected = false;
 let isProcessingChat = false;
 const chatQueue = [];
 
+// Conversation with LLM
+const conversation = [];
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// VTube Studio connection
+// VTS connection
 async function connectVTS() {
   try {
-    console.log('🔌 Connecting to VTube Studio...');
+    console.log('Connecting to VTube Studio...');
     vts = new VTubeStudioAPI();
     await vts.connect();
     await vts.authenticate();
-    console.log('✓ VTube Studio connected and authenticated (lip sync enabled)\n');
+    console.log('✓ VTube Studio connected and authenticated.');
     vtsConnected = true;
   } catch (error) {
-    console.warn('⚠️  Could not connect to VTube Studio. Visual features disabled.');
-    console.warn(`   Error: ${error.message}\n`);
+    console.warn('⚠️ Could not connect to VTube Studio.');
+    console.warn(`Error: ${error.message}`);
     vtsConnected = false;
   }
 }
@@ -63,12 +66,12 @@ async function connectVTS() {
 // Twitch chat connection
 async function connectTwitch() {
   if (!process.env.TWITCH_USERNAME || !process.env.TWITCH_CHANNEL || !process.env.TWITCH_OAUTH) {
-    console.log('⚠️  Twitch credentials not configured. Chat features disabled.\n');
+    console.log('⚠️ Twitch credentials not configured. Please configure your environment variables.');
     return;
   }
 
   try {
-    console.log('📺 Connecting to Twitch chat...');
+    console.log('Connecting to Twitch chat...');
 
     twitchClient = new tmi.Client({
       options: { debug: false },
@@ -241,7 +244,7 @@ async function chatStreamingWithResponse(userInput) {
 
 // Audio recording
 async function recordAudio() {
-  const filename = `/tmp/recording_${Date.now()}.wav`;
+  const filename = `${tmpdir()}/recording_${Date.now()}.wav`;
   console.log('\n🎤 Recording... (speak now)\n');
 
   try {
@@ -263,7 +266,7 @@ async function recordAudio() {
 async function transcribeAudio(audioFile) {
   try {
     await execPromise(
-      `whisper "${audioFile}" --model base --language en --output_format txt --output_dir /tmp`
+      `whisper "${audioFile}" --model base --language en --output_format txt --output_dir "${tmpdir()}"`
     );
 
     const txtFile = audioFile.replace('.wav', '.txt');
@@ -337,7 +340,7 @@ async function generateTTS(text) {
     }
 
     const audioBuffer = Buffer.concat(chunks);
-    const tempFile = `/tmp/tts_${Date.now()}.mp3`;
+    const tempFile = `${tmpdir()}/tts_${Date.now()}.mp3`;
     writeFileSync(tempFile, audioBuffer);
     return tempFile;
   } catch (error) {
@@ -397,7 +400,18 @@ async function playAudioWithLipSync(tempFile) {
       lipSyncInterval = setInterval(updateLipSync, CONFIG.LIP_SYNC_UPDATE_RATE);
     }
 
-    const player = spawn('afplay', [tempFile]);
+    // Use platform-specific audio player
+    const isWindows = process.platform === 'win32';
+    let playerCmd, playerArgs;
+
+    if (isWindows) {
+      // Try ffplay first, fall back to Windows Media Player CLI
+      playerCmd = 'ffplay';
+      playerArgs = ['-nodisp', '-autoexit', '-hide_banner', '-loglevel', 'error', tempFile];
+    } else {
+      playerCmd = 'afplay';
+      playerArgs = [tempFile];
+    }
 
     const cleanup = async () => {
       if (lipSyncInterval) {
@@ -413,21 +427,34 @@ async function playAudioWithLipSync(tempFile) {
           // Silent fail
         }
       }
-      unlinkSync(tempFile);
+      if (existsSync(tempFile)) {
+        unlinkSync(tempFile);
+      }
     };
+
+    const player = spawn(playerCmd, playerArgs);
+
+    player.on('error', async (err) => {
+      if (err.code === 'ENOENT' && isWindows && playerCmd === 'ffplay') {
+        console.error('\n❌ ffplay not found. Please install ffmpeg:');
+        console.error('   Option 1: winget install ffmpeg');
+        console.error('   Option 2: choco install ffmpeg');
+        console.error('   Option 3: Download from https://www.gyan.dev/ffmpeg/builds/\n');
+        await cleanup();
+        reject(new Error('ffplay not found - please install ffmpeg'));
+        return;
+      }
+      await cleanup();
+      reject(err);
+    });
 
     player.on('close', async (code) => {
       await cleanup();
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`afplay exited with code ${code}`));
+        reject(new Error(`Audio player exited with code ${code}`));
       }
-    });
-
-    player.on('error', async (err) => {
-      await cleanup();
-      reject(err);
     });
   });
 }
