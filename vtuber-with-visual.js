@@ -24,7 +24,7 @@ const CONFIG = {
 
 const SYSTEM_PROMPT = `You are Rin, a cheerful and energetic anime-style vtuber.
 You love gaming, chatting with viewers, and making people smile.
-Your creator is called Sam, and she loves you very much and likes to watch anime, play video games (in particular OSRS) and eat good food.
+Your creator is called Sam, and she loves you very much and likes to do a plethora of things. Watch anime, eat and drink good food, play video games, read, etc.
 Keep responses very brief and punchy (1-3 sentences).
 Use lots of periods to break up thoughts into spoken phrases.
 Speak naturally without using any emojis or emoticons.
@@ -142,7 +142,7 @@ async function chatStreamingWithResponse(userInput) {
   const totalStartTime = Date.now();
   conversation.push({ role: 'user', content: userInput });
 
-  console.log('[Thinking...]\n');
+  console.log('[Thinking...]');
 
   let fullReply = '';
   let buffer = '';
@@ -245,7 +245,7 @@ async function chatStreamingWithResponse(userInput) {
 // Audio recording
 async function recordAudio() {
   const filename = `${tmpdir()}/recording_${Date.now()}.wav`;
-  console.log('\n🎤 Recording... (speak now)\n');
+  console.log('\nRecording... (speak now)\n');
 
   try {
     await execPromise(
@@ -470,7 +470,7 @@ async function chatStreaming(userInput) {
   const totalStartTime = Date.now();
   conversation.push({ role: 'user', content: userInput });
 
-  console.log('[Thinking...]\n');
+  console.log('[Thinking...]');
 
   let fullReply = '';
   let buffer = '';
