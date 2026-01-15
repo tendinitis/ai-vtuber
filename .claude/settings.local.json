@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10 -m pip:*)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10:*)",
+      "Bash(whisper:*)",
+      "Bash(sox:*)",
+      "Bash(brew install:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
